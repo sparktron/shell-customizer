@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # dotfiles install script
-# installs: zsh, oh-my-zsh, powerlevel10k, .zshrc, .p10k.zsh
+# replicates: zsh + oh-my-zsh + powerlevel10k + terminator config + fonts
 set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,9 +13,9 @@ die()     { echo "[error] $*" >&2; exit 1; }
 backup() {
   local file="$1"
   if [[ -f "$file" && ! -L "$file" ]]; then
-    local backup="${file}.bak.$(date +%Y%m%d_%H%M%S)"
-    mv "$file" "$backup"
-    warn "backed up $file → $backup"
+    local bak="${file}.bak.$(date +%Y%m%d_%H%M%S)"
+    mv "$file" "$bak"
+    warn "backed up $file → $bak"
   fi
 }
 
@@ -50,7 +50,31 @@ else
   success "powerlevel10k already installed"
 fi
 
-# ── 4. dotfiles ──────────────────────────────────────────────────────────────
+# ── 4. fonts ─────────────────────────────────────────────────────────────────
+FONT_DIR="$HOME/.local/share/fonts"
+mkdir -p "$FONT_DIR"
+info "installing fonts..."
+fonts_installed=0
+for font in \
+  "Droid Sans Mono for Powerline.otf" \
+  "MesloLGS NF Regular.ttf" \
+  "MesloLGS NF Bold.ttf" \
+  "MesloLGS NF Italic.ttf" \
+  "MesloLGS NF Bold Italic.ttf"
+do
+  if [[ ! -f "$FONT_DIR/$font" ]]; then
+    cp "$DOTFILES_DIR/$font" "$FONT_DIR/"
+    (( fonts_installed++ )) || true
+  fi
+done
+if (( fonts_installed > 0 )); then
+  fc-cache -f "$FONT_DIR"
+  success "$fonts_installed font(s) installed and cache refreshed"
+else
+  success "fonts already installed"
+fi
+
+# ── 5. dotfiles ──────────────────────────────────────────────────────────────
 info "installing dotfiles..."
 
 backup "$HOME/.zshrc"
@@ -61,19 +85,32 @@ backup "$HOME/.p10k.zsh"
 cp "$DOTFILES_DIR/.p10k.zsh" "$HOME/.p10k.zsh"
 success ".p10k.zsh installed"
 
-# ── 5. set default shell ─────────────────────────────────────────────────────
+# ── 6. terminator config ─────────────────────────────────────────────────────
+if command -v terminator &>/dev/null || [[ -d "$HOME/.config/terminator" ]]; then
+  TERM_CONF="$HOME/.config/terminator/config"
+  mkdir -p "$(dirname "$TERM_CONF")"
+  backup "$TERM_CONF"
+  cp "$DOTFILES_DIR/terminator.config" "$TERM_CONF"
+  success "terminator config installed"
+else
+  warn "terminator not found — skipping terminator config"
+fi
+
+# ── 7. set default shell ─────────────────────────────────────────────────────
 ZSHPATH="$(command -v zsh)"
 if [[ "$SHELL" != "$ZSHPATH" ]]; then
   info "setting default shell to zsh..."
-  if grep -qF "$ZSHPATH" /etc/shells; then
-    chsh -s "$ZSHPATH"
-    success "default shell → $ZSHPATH (takes effect on next login)"
-  else
-    warn "$ZSHPATH not in /etc/shells — add it manually, then run: chsh -s $ZSHPATH"
+  # Add to /etc/shells if missing (common on fresh installs)
+  if ! grep -qxF "$ZSHPATH" /etc/shells; then
+    echo "$ZSHPATH" | sudo tee -a /etc/shells
+    info "added $ZSHPATH to /etc/shells"
   fi
+  chsh -s "$ZSHPATH"
+  success "default shell → $ZSHPATH (takes effect on next login)"
 else
   success "default shell is already zsh"
 fi
 
 echo ""
-echo "done. open a new terminal (or run: exec zsh) to see your prompt."
+echo "done. open a new terminal to see your prompt."
+echo "if the shell doesn't change, log out and back in (chsh requires a new session)."
