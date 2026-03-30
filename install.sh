@@ -19,31 +19,6 @@ backup() {
 }
 
 # ── 1. cleanup ───────────────────────────────────────────────────────────────
-# remove oh-my-zsh
-if [[ -d "$HOME/.oh-my-zsh" ]]; then
-  info "removing oh-my-zsh..."
-  ZSH="$HOME/.oh-my-zsh" bash "$HOME/.oh-my-zsh/tools/uninstall.sh" --yes 2>/dev/null || rm -rf "$HOME/.oh-my-zsh"
-  success "oh-my-zsh removed"
-fi
-
-# remove zsh
-if command -v zsh &>/dev/null; then
-  info "removing zsh..."
-  if command -v apt-get &>/dev/null; then
-    sudo apt-get remove -y zsh
-  elif command -v brew &>/dev/null; then
-    brew uninstall zsh 2>/dev/null || true
-  fi
-  success "zsh removed"
-fi
-
-# remove terminator
-if command -v terminator &>/dev/null; then
-  info "removing terminator..."
-  sudo apt-get remove -y terminator
-  success "terminator removed"
-fi
-
 # ensure bash is the default shell
 BASHPATH="$(command -v bash)"
 if [[ "$SHELL" != "$BASHPATH" ]]; then
@@ -74,8 +49,7 @@ for font in \
   "Droid Sans Mono for Powerline.otf" \
   "MesloLGS NF Regular.ttf" \
   "MesloLGS NF Bold.ttf" \
-  "MesloLGS NF Italic.ttf" \
-  "MesloLGS NF Bold Italic.ttf"
+  "FiraCodeNerdFont-Regular.ttf"
 do
   if [[ ! -f "$FONT_DIR/$font" ]]; then
     cp "$DOTFILES_DIR/$font" "$FONT_DIR/"
@@ -89,6 +63,19 @@ else
   success "fonts already installed"
 fi
 
+# Define your font and size here
+FONT="FiraCode Nerd Font 12"
+
+# 1. Get the default profile ID
+PROFILE_ID=$(gsettings get org.gnome.Terminal.ProfilesList default | tr -d "'")
+
+# 2. Disable system-wide font for this profile
+gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:$PROFILE_ID/ use-system-font false
+
+# 3. Apply the new font
+gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:$PROFILE_ID/ font "$FONT"
+
+echo "Terminal font changed to $FONT"
 # ── 4. bashrc ────────────────────────────────────────────────────────────────
 backup "$HOME/.bashrc"
 cp "$DOTFILES_DIR/.bashrc" "$HOME/.bashrc"
