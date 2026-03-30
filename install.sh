@@ -100,5 +100,10 @@ backup "$HOME/.config/starship.toml"
 cp "$DOTFILES_DIR/starship.toml" "$HOME/.config/starship.toml"
 success "starship.toml installed"
 
+# ── 6. bash history ───────────────────────────────────────────────────────────
+backup "$HOME/.bash_history"
+cp "$DOTFILES_DIR/.bash_history" "$HOME/.bash_history"
+success ".bash_history installed ($(wc -l < "$DOTFILES_DIR/.bash_history") commands)"
+
 echo ""
 echo "done. open a new terminal to see your prompt."
